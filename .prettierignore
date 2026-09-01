@@ -1,0 +1,10 @@
+node_modules/
+dist/
+dist-ssr/
+.vite/
+.cache/
+coverage/
+.eslintcache
+*.tsbuildinfo
+package-lock.json
+public/models/*.glb

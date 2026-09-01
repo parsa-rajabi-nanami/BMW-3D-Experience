@@ -1,0 +1,8 @@
+This work is based on "2025 BMW M5 Sedan"
+(https://sketchfab.com/3d-models/2025-bmw-m5-sedan-4ab34c43bada482b8e467be97ebaeba3)
+by Ddiaz Design (https://sketchfab.com/ddiaz-design), licensed under
+CC-BY-NC-SA-4.0 (http://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+The model license requires attribution, prohibits commercial use, and requires
+modified versions to use the same license. The shipped GLB is a modified,
+web-optimized version of the supplied source asset.
