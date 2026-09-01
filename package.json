@@ -1,5 +1,6 @@
 {
   "name": "bmw-3d-experience",
+  "homepage": "https://parsa-rajabi-nanami.github.io/BMW-3D-Experience",
   "private": true,
   "type": "module",
   "scripts": {
@@ -7,11 +8,14 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@react-three/drei": "^10",
     "@react-three/fiber": "^9",
+    "gh-pages": "^6.3.0",
     "lucide-react": "^0.575.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
