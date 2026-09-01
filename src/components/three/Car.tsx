@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { optionOf, type Config } from "@/lib/experience";
 
-const MODEL_URL = "/models/car.glb";
+const MODEL_URL = `${import.meta.env.BASE_URL}models/car.glb`;
 const TARGET_LENGTH = 4.4;
 
 type MaterialBuckets = {
