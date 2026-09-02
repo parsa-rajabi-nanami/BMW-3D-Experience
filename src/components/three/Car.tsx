@@ -56,9 +56,31 @@ function cloneGeometryForMerge(
   relativeMatrix: THREE.Matrix4,
 ) {
   const geometry = source.clone();
-  Object.entries(geometry.attributes).forEach(([name, attribute]) => {
-    geometry.setAttribute(name, floatAttribute(attribute));
-  });
+  const elements = relativeMatrix.elements;
+  const hasLinearTransform =
+    Math.abs(elements[0] - 1) > 1e-6 ||
+    Math.abs(elements[1]) > 1e-6 ||
+    Math.abs(elements[2]) > 1e-6 ||
+    Math.abs(elements[4]) > 1e-6 ||
+    Math.abs(elements[5] - 1) > 1e-6 ||
+    Math.abs(elements[6]) > 1e-6 ||
+    Math.abs(elements[8]) > 1e-6 ||
+    Math.abs(elements[9]) > 1e-6 ||
+    Math.abs(elements[10] - 1) > 1e-6;
+
+  if (hasLinearTransform) {
+    // Rotations/scales affect normals and tangents too, so retain the fully
+    // decoded path for those meshes.
+    Object.entries(geometry.attributes).forEach(([name, attribute]) => {
+      geometry.setAttribute(name, floatAttribute(attribute));
+    });
+  } else {
+    // Wheel fragments are translation-only in the supplied asset. Decoding
+    // only position avoids allocating/converting UV, color and normal buffers
+    // during the largest part of runtime preparation.
+    const position = geometry.getAttribute("position");
+    if (position) geometry.setAttribute("position", floatAttribute(position));
+  }
   geometry.applyMatrix4(relativeMatrix);
   return geometry;
 }

@@ -45,7 +45,9 @@ export function Airflow({
     mat.opacity = opacity.current;
     if (!group.current) return;
     group.current.visible = opacity.current > 0.01;
-    if (reduced) return;
+    // The stream meshes are hidden for most of the experience. Avoid doing
+    // per-stream CPU work while the visualisation is inactive.
+    if (reduced || opacity.current <= 0.01) return;
     const t = state.clock.elapsedTime;
     group.current.children.forEach((child, i) => {
       const s = streams[i]!;

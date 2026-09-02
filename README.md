@@ -55,9 +55,13 @@ such animation is claimed by the integration. See `public/models/car-license.txt
 for the required attribution and license terms.
 
 The 3D experience is loaded as a deferred chunk so the editorial page can render
-without waiting for Three.js; the model itself is preloaded once that chunk is
-available. Mobile devices use a lower device-pixel-ratio cap, disable real-time
-shadow mapping, and retain the contact shadow for a lighter scene.
+without waiting for Three.js. The model is also preloaded from the document so
+its request can start while the application chunks are loading. Mobile devices
+use a device-pixel-ratio cap of 1, disable real-time shadow mapping and contact
+shadows, and use a lower-resolution environment map for a lighter scene. Devices
+with four or fewer logical cores, four or fewer GB of memory, or Save-Data
+enabled also use a 30fps demand-rendered scene, reduced lighting, and pause 3D
+rendering while the page is hidden.
 
 If the model is replaced, review `src/components/three/Car.tsx` for its
 material-name selectors and interaction-group names.

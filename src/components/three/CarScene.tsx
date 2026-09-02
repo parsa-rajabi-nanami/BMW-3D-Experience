@@ -27,6 +27,7 @@ import * as THREE from "three";
 import { useExperience } from "@/hooks/use-experience";
 import { HOTSPOTS, MODES, SECTION_VIEWS } from "@/lib/experience";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useDevicePerformance } from "@/hooks/use-device-performance";
 import { Car } from "./Car";
 import { Airflow } from "./Airflow";
 
@@ -165,6 +166,18 @@ function CameraRig({
   return null;
 }
 
+function LowPowerRenderLoop({ enabled }: { enabled: boolean }) {
+  const invalidate = useThree((state) => state.invalidate);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const interval = window.setInterval(() => invalidate(), 1000 / 30);
+    return () => window.clearInterval(interval);
+  }, [enabled, invalidate]);
+
+  return null;
+}
+
 function Hotspots({ compact }: { compact: boolean }) {
   const { hotspot, setHotspot, focus, section } = useExperience();
   if (section !== "explore" || compact) return null;
@@ -295,9 +308,11 @@ function SceneControls() {
 function Lighting({
   mode,
   compact,
+  lowPower,
 }: {
   mode: keyof typeof MODES;
   compact: boolean;
+  lowPower: boolean;
 }) {
   const cfg = MODES[mode];
   return (
@@ -307,26 +322,30 @@ function Lighting({
       <directionalLight
         position={[5, 8, 6]}
         intensity={3.2 * cfg.exposure}
-        castShadow={!compact}
-        shadow-mapSize-width={512}
-        shadow-mapSize-height={512}
+        castShadow={!compact && !lowPower}
+        shadow-mapSize-width={lowPower ? 256 : 512}
+        shadow-mapSize-height={lowPower ? 256 : 512}
         shadow-bias={-0.0004}
       />
-      <spotLight
-        position={[-6, 4.5, -5]}
-        angle={0.65}
-        intensity={18 * cfg.exposure}
-        color={cfg.accent}
-        penumbra={0.9}
-      />
-      <spotLight
-        position={[1, 6.5, 8]}
-        angle={0.75}
-        intensity={20 * cfg.exposure}
-        color="#ffffff"
-        penumbra={0.85}
-      />
-      <Environment resolution={256}>
+      {!lowPower && (
+        <>
+          <spotLight
+            position={[-6, 4.5, -5]}
+            angle={0.65}
+            intensity={18 * cfg.exposure}
+            color={cfg.accent}
+            penumbra={0.9}
+          />
+          <spotLight
+            position={[1, 6.5, 8]}
+            angle={0.75}
+            intensity={20 * cfg.exposure}
+            color="#ffffff"
+            penumbra={0.85}
+          />
+        </>
+      )}
+      <Environment resolution={lowPower ? 64 : compact ? 128 : 256} frames={1}>
         <Lightformer
           intensity={4.8}
           position={[0, 6.5, 0]}
@@ -378,6 +397,7 @@ function GarageFloor({ compact }: { compact: boolean }) {
 function Stage({ compact }: { compact: boolean }) {
   const { config, mode, section, topic } = useExperience();
   const reduced = useReducedMotion();
+  const lowPower = useDevicePerformance();
   const autoRotate = useMemo(() => {
     if (section === "explore" || section === "configure") return 0.02;
     return MODES[mode].rotate * 0.6;
@@ -387,7 +407,8 @@ function Stage({ compact }: { compact: boolean }) {
     <>
       <color attach="background" args={["#080d13"]} />
       <fog attach="fog" args={["#080d13", 9, 30]} />
-      <Lighting mode={mode} compact={compact} />
+      <Lighting mode={mode} compact={compact} lowPower={lowPower} />
+      <LowPowerRenderLoop enabled={lowPower && !reduced} />
       <CameraRig autoRotate={autoRotate} reduced={reduced} />
       <GarageFloor compact={compact} />
       <Suspense fallback={<SceneLoading />}>
@@ -398,16 +419,18 @@ function Stage({ compact }: { compact: boolean }) {
         reduced={reduced}
       />
       <Hotspots compact={compact} />
-      <ContactShadows
-        position={[0, 0.006, 0]}
-        opacity={0.85}
-        scale={22}
-        blur={2.6}
-        far={5}
-        frames={1}
-        resolution={256}
-        color="#000000"
-      />
+      {!compact && !lowPower && (
+        <ContactShadows
+          position={[0, 0.006, 0]}
+          opacity={0.85}
+          scale={22}
+          blur={2.6}
+          far={5}
+          frames={1}
+          resolution={256}
+          color="#000000"
+        />
+      )}
     </>
   );
 }
@@ -417,6 +440,8 @@ export function CarScene() {
   const wrap = useRef<HTMLDivElement>(null);
   const webGL = useWebGLSupport();
   const compact = useCompactViewport();
+  const lowPower = useDevicePerformance();
+  const [pageVisible, setPageVisible] = useState(true);
   const [sceneKey, setSceneKey] = useState(0);
   const [sceneFailed, setSceneFailed] = useState(false);
 
@@ -424,6 +449,14 @@ export function CarScene() {
     setSceneFailed(false);
     setSceneKey((key) => key + 1);
   };
+
+  useEffect(() => {
+    const updateVisibility = () => setPageVisible(!document.hidden);
+    updateVisibility();
+    document.addEventListener("visibilitychange", updateVisibility);
+    return () =>
+      document.removeEventListener("visibilitychange", updateVisibility);
+  }, []);
 
   useEffect(() => {
     const el = wrap.current;
@@ -499,14 +532,26 @@ export function CarScene() {
             onRetry={retryScene}
           >
             <Canvas
-              dpr={compact ? [1, 1.25] : [1, 1.5]}
-              shadows={!compact}
-              gl={{ antialias: !compact, powerPreference: "high-performance" }}
+              frameloop={
+                pageVisible ? (lowPower ? "demand" : "always") : "never"
+              }
+              dpr={lowPower || compact ? [1, 1] : [1, 1.5]}
+              shadows={!compact && !lowPower}
+              gl={{
+                antialias: !compact && !lowPower,
+                powerPreference: lowPower ? "low-power" : "high-performance",
+              }}
               camera={{ fov: 34, position: [6, 3, 8], near: 0.1, far: 120 }}
               aria-label="Interactive 3D vehicle preview"
               onCreated={({ gl }) => {
                 gl.toneMapping = THREE.ACESFilmicToneMapping;
                 gl.toneMappingExposure = 1.05;
+                // The car and its directional shadow caster are static. Keep
+                // the shadow map from being regenerated on every camera frame.
+                if (!compact && !lowPower) {
+                  gl.shadowMap.autoUpdate = false;
+                  gl.shadowMap.needsUpdate = true;
+                }
               }}
             >
               <Stage compact={compact} />
