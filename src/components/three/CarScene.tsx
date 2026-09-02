@@ -394,7 +394,13 @@ function GarageFloor({ compact }: { compact: boolean }) {
   );
 }
 
-function Stage({ compact }: { compact: boolean }) {
+function Stage({
+  compact,
+  pageVisible,
+}: {
+  compact: boolean;
+  pageVisible: boolean;
+}) {
   const { config, mode, section, topic } = useExperience();
   const reduced = useReducedMotion();
   const lowPower = useDevicePerformance();
@@ -408,7 +414,7 @@ function Stage({ compact }: { compact: boolean }) {
       <color attach="background" args={["#080d13"]} />
       <fog attach="fog" args={["#080d13", 9, 30]} />
       <Lighting mode={mode} compact={compact} lowPower={lowPower} />
-      <LowPowerRenderLoop enabled={lowPower && !reduced} />
+      <LowPowerRenderLoop enabled={lowPower && !reduced && pageVisible} />
       <CameraRig autoRotate={autoRotate} reduced={reduced} />
       <GarageFloor compact={compact} />
       <Suspense fallback={<SceneLoading />}>
@@ -539,7 +545,8 @@ export function CarScene() {
               shadows={!compact && !lowPower}
               gl={{
                 antialias: !compact && !lowPower,
-                powerPreference: lowPower ? "low-power" : "high-performance",
+                powerPreference:
+                  lowPower || compact ? "low-power" : "high-performance",
               }}
               camera={{ fov: 34, position: [6, 3, 8], near: 0.1, far: 120 }}
               aria-label="Interactive 3D vehicle preview"
@@ -554,7 +561,7 @@ export function CarScene() {
                 }
               }}
             >
-              <Stage compact={compact} />
+              <Stage compact={compact} pageVisible={pageVisible} />
             </Canvas>
           </SceneErrorBoundary>
         ) : null}
