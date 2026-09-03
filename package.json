@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "assets:ktx2": "node scripts/optimize-car-assets.mjs",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },

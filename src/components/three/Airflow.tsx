@@ -2,15 +2,17 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
-const COUNT = 46;
+const DEFAULT_COUNT = 46;
 
 /** Artistic airflow visualisation — streamlines sweeping over the body. */
 export function Airflow({
   active,
   reduced,
+  count = DEFAULT_COUNT,
 }: {
   active: boolean;
   reduced: boolean;
+  count?: number;
 }) {
   const group = useRef<THREE.Group>(null);
   const mat = useMemo(
@@ -25,14 +27,14 @@ export function Airflow({
   );
   const streams = useMemo(
     () =>
-      Array.from({ length: COUNT }, (_, i) => ({
+      Array.from({ length: count }, (_, i) => ({
         z: -1.1 + (i % 12) * 0.2,
         y: 0.18 + Math.floor(i / 12) * 0.32 + (i % 3) * 0.04,
         speed: 2.4 + (i % 5) * 0.35,
         offset: (i * 0.37) % 1,
         len: 0.5 + (i % 4) * 0.22,
       })),
-    [],
+    [count],
   );
   const opacity = useRef(0);
 

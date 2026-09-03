@@ -10,5 +10,5 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
-  base: "/BMW-3D-Experience/"
+  base: "/BMW-3D-Experience/",
 });

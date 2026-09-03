@@ -28,6 +28,7 @@ import { useExperience } from "@/hooks/use-experience";
 import { HOTSPOTS, MODES, SECTION_VIEWS } from "@/lib/experience";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useDevicePerformance } from "@/hooks/use-device-performance";
+import type { DeviceQuality } from "@/hooks/use-device-performance";
 import { Car } from "./Car";
 import { Airflow } from "./Airflow";
 
@@ -123,20 +124,6 @@ function useWebGLSupport() {
   return supported;
 }
 
-function useCompactViewport() {
-  const [compact, setCompact] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia("(max-width: 767px)");
-    const update = () => setCompact(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-
-  return compact;
-}
-
 function CameraRig({
   autoRotate,
   reduced,
@@ -166,14 +153,46 @@ function CameraRig({
   return null;
 }
 
-function LowPowerRenderLoop({ enabled }: { enabled: boolean }) {
+function DemandRenderLoop({
+  enabled,
+  frameRate,
+}: {
+  enabled: boolean;
+  frameRate: number;
+}) {
   const invalidate = useThree((state) => state.invalidate);
 
   useEffect(() => {
     if (!enabled) return;
-    const interval = window.setInterval(() => invalidate(), 1000 / 30);
+    const interval = window.setInterval(() => invalidate(), 1000 / frameRate);
     return () => window.clearInterval(interval);
-  }, [enabled, invalidate]);
+  }, [enabled, frameRate, invalidate]);
+
+  return null;
+}
+
+function RuntimeMetrics({ enabled }: { enabled: boolean }) {
+  const { gl } = useThree();
+  const lastReport = useRef(0);
+  const frameCount = useRef(0);
+
+  useFrame((state) => {
+    if (!enabled) return;
+    frameCount.current += 1;
+    const elapsed = state.clock.elapsedTime;
+    if (elapsed - lastReport.current < 2) return;
+    const seconds = elapsed - lastReport.current;
+    console.info("[BMW Experience] renderer metrics", {
+      fps: Math.round(frameCount.current / seconds),
+      pixelRatio: gl.getPixelRatio(),
+      calls: gl.info.render.calls,
+      triangles: gl.info.render.triangles,
+      geometries: gl.info.memory.geometries,
+      textures: gl.info.memory.textures,
+    });
+    lastReport.current = elapsed;
+    frameCount.current = 0;
+  });
 
   return null;
 }
@@ -307,12 +326,10 @@ function SceneControls() {
 
 function Lighting({
   mode,
-  compact,
-  lowPower,
+  quality,
 }: {
   mode: keyof typeof MODES;
-  compact: boolean;
-  lowPower: boolean;
+  quality: DeviceQuality;
 }) {
   const cfg = MODES[mode];
   return (
@@ -322,12 +339,12 @@ function Lighting({
       <directionalLight
         position={[5, 8, 6]}
         intensity={3.2 * cfg.exposure}
-        castShadow={!compact && !lowPower}
-        shadow-mapSize-width={lowPower ? 256 : 512}
-        shadow-mapSize-height={lowPower ? 256 : 512}
+        castShadow={quality.shadows}
+        shadow-mapSize-width={quality.shadowMapSize}
+        shadow-mapSize-height={quality.shadowMapSize}
         shadow-bias={-0.0004}
       />
-      {!lowPower && (
+      {quality.secondaryLights && (
         <>
           <spotLight
             position={[-6, 4.5, -5]}
@@ -345,7 +362,7 @@ function Lighting({
           />
         </>
       )}
-      <Environment resolution={lowPower ? 64 : compact ? 128 : 256} frames={1}>
+      <Environment resolution={quality.environmentResolution} frames={1}>
         <Lightformer
           intensity={4.8}
           position={[0, 6.5, 0]}
@@ -395,15 +412,14 @@ function GarageFloor({ compact }: { compact: boolean }) {
 }
 
 function Stage({
-  compact,
+  quality,
   pageVisible,
 }: {
-  compact: boolean;
+  quality: DeviceQuality;
   pageVisible: boolean;
 }) {
   const { config, mode, section, topic } = useExperience();
   const reduced = useReducedMotion();
-  const lowPower = useDevicePerformance();
   const autoRotate = useMemo(() => {
     if (section === "explore" || section === "configure") return 0.02;
     return MODES[mode].rotate * 0.6;
@@ -413,19 +429,23 @@ function Stage({
     <>
       <color attach="background" args={["#080d13"]} />
       <fog attach="fog" args={["#080d13", 9, 30]} />
-      <Lighting mode={mode} compact={compact} lowPower={lowPower} />
-      <LowPowerRenderLoop enabled={lowPower && !reduced && pageVisible} />
+      <Lighting mode={mode} quality={quality} />
+      <DemandRenderLoop
+        enabled={quality.renderMode === "demand" && pageVisible}
+        frameRate={quality.frameRate}
+      />
       <CameraRig autoRotate={autoRotate} reduced={reduced} />
-      <GarageFloor compact={compact} />
+      <GarageFloor compact={quality.isMobile} />
       <Suspense fallback={<SceneLoading />}>
-        <Car config={config} />
+        <Car config={config} quality={quality} />
       </Suspense>
       <Airflow
         active={section === "engineering" && topic === "aerodynamics"}
         reduced={reduced}
+        count={quality.airflowCount}
       />
-      <Hotspots compact={compact} />
-      {!compact && !lowPower && (
+      <Hotspots compact={quality.isMobile} />
+      {quality.contactShadows && (
         <ContactShadows
           position={[0, 0.006, 0]}
           opacity={0.85}
@@ -437,6 +457,9 @@ function Stage({
           color="#000000"
         />
       )}
+      <RuntimeMetrics
+        enabled={import.meta.env.DEV && window.location.search.includes("perf")}
+      />
     </>
   );
 }
@@ -445,8 +468,7 @@ export function CarScene() {
   const { orbit, interactive } = useExperience();
   const wrap = useRef<HTMLDivElement>(null);
   const webGL = useWebGLSupport();
-  const compact = useCompactViewport();
-  const lowPower = useDevicePerformance();
+  const quality = useDevicePerformance();
   const [pageVisible, setPageVisible] = useState(true);
   const [sceneKey, setSceneKey] = useState(0);
   const [sceneFailed, setSceneFailed] = useState(false);
@@ -538,15 +560,13 @@ export function CarScene() {
             onRetry={retryScene}
           >
             <Canvas
-              frameloop={
-                pageVisible ? (lowPower ? "demand" : "always") : "never"
-              }
-              dpr={lowPower || compact ? [1, 1] : [1, 1.5]}
-              shadows={!compact && !lowPower}
+              frameloop={pageVisible ? quality.renderMode : "never"}
+              dpr={quality.pixelRatio}
+              shadows={quality.shadows}
               gl={{
-                antialias: !compact && !lowPower,
+                antialias: quality.antialias,
                 powerPreference:
-                  lowPower || compact ? "low-power" : "high-performance",
+                  quality.tier === "high" ? "high-performance" : "low-power",
               }}
               camera={{ fov: 34, position: [6, 3, 8], near: 0.1, far: 120 }}
               aria-label="Interactive 3D vehicle preview"
@@ -555,13 +575,13 @@ export function CarScene() {
                 gl.toneMappingExposure = 1.05;
                 // The car and its directional shadow caster are static. Keep
                 // the shadow map from being regenerated on every camera frame.
-                if (!compact && !lowPower) {
+                if (quality.shadows) {
                   gl.shadowMap.autoUpdate = false;
                   gl.shadowMap.needsUpdate = true;
                 }
               }}
             >
-              <Stage compact={compact} pageVisible={pageVisible} />
+              <Stage quality={quality} pageVisible={pageVisible} />
             </Canvas>
           </SceneErrorBoundary>
         ) : null}

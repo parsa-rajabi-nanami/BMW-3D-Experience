@@ -6,7 +6,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist", "node_modules"],
+    ignores: ["dist", "node_modules", "public/basis"],
   },
   js.configs.recommended,
   {
@@ -31,6 +31,12 @@ export default tseslint.config(
   },
   {
     files: ["vite.config.ts"],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
+    files: ["scripts/**/*.mjs"],
     languageOptions: {
       globals: globals.node,
     },

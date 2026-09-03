@@ -17,7 +17,6 @@ const CATEGORY_VIEWS: Record<
 > = {
   exterior: { theta: 2.55, phi: 1.22, radius: 6.8 },
   wheels: { theta: 1.15, phi: 1.44, radius: 4.6 },
-  brakes: { theta: 1.05, phi: 1.42, radius: 4.2 },
   interior: { theta: 1.9, phi: 1.0, radius: 4.4 },
   trim: { theta: 2.1, phi: 1.05, radius: 5.2 },
 };
@@ -54,8 +53,8 @@ export function ConfiguratorSection() {
             </h2>
             <p className="mt-6 max-w-sm text-sm leading-relaxed text-muted-foreground">
               Drag to rotate and use a trackpad pinch or wheel to move closer.
-              Paint and wheel choices update the live vehicle preview and
-              estimated price instantly.
+              Body, rim, interior and trim choices update the live vehicle
+              preview and estimated price instantly.
             </p>
           </Reveal>
         </div>

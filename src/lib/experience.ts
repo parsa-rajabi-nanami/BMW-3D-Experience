@@ -56,6 +56,13 @@ export const EXTERIORS: Option[] = [
     hex: "#8c1420",
     note: "Metallic",
   },
+  {
+    id: "isle-of-man-green",
+    name: "Isle of Man Green",
+    price: 2400,
+    hex: "#1f5b45",
+    note: "Metallic",
+  },
 ];
 
 export const WHEELS: Option[] = [
@@ -82,30 +89,6 @@ export const WHEELS: Option[] = [
   },
 ];
 
-export const BRAKES: Option[] = [
-  {
-    id: "m-sport",
-    name: "M Sport",
-    price: 0,
-    hex: "#3a3f47",
-    note: "Steel · Blue calipers",
-  },
-  {
-    id: "performance",
-    name: "Performance",
-    price: 2900,
-    hex: "#8a1f28",
-    note: "Steel · Red calipers",
-  },
-  {
-    id: "carbon-ceramic",
-    name: "Carbon Ceramic",
-    price: 8500,
-    hex: "#c7a24a",
-    note: "Ceramic · Gold",
-  },
-];
-
 export const INTERIORS: Option[] = [
   { id: "black-leather", name: "Black Leather", price: 0, hex: "#1b1d21" },
   { id: "cognac-leather", name: "Cognac Leather", price: 1600, hex: "#8a5a2b" },
@@ -120,9 +103,8 @@ export const TRIMS: Option[] = [
 ];
 
 export const CATEGORIES = [
-  { key: "exterior", label: "EXTERIOR", options: EXTERIORS },
-  { key: "wheels", label: "WHEELS", options: WHEELS },
-  { key: "brakes", label: "BRAKES", options: BRAKES },
+  { key: "exterior", label: "BODY COLOR", options: EXTERIORS },
+  { key: "wheels", label: "WHEEL/RIM COLOR", options: WHEELS },
   { key: "interior", label: "INTERIOR", options: INTERIORS },
   { key: "trim", label: "TRIM", options: TRIMS },
 ] as const;
@@ -134,7 +116,6 @@ export type Config = Record<CategoryKey, string>;
 export const DEFAULT_CONFIG: Config = {
   exterior: "alpine-white",
   wheels: "m-sport",
-  brakes: "m-sport",
   interior: "black-leather",
   trim: "carbon-fibre",
 };
